@@ -1,0 +1,36 @@
+name:       secret_sauce
+type:       application
+
+environment:
+    name:   secret_sauce_lib
+    type:   python
+    binary: python2.7
+    requirements:
+        -   requirements.pip
+    post_environment:   []
+
+extra_files:
+    -   name:           secret_sauce_uwsgi
+        type:           binary
+        template:       .trebuchet/uwsgi.sh
+
+services:
+    -   name:           secret_sauce_web_1_upstart
+        type:           upstart
+        binary_name:    secret_sauce_uwsgi
+
+    -   name:           secret_sauce_web_2_upstart
+        type:           upstart
+        binary_name:    secret_sauce_uwsgi
+        debian_scripts:
+            postinst:
+                -   "touch /tmp/secret_sauce_web_upstart.foo"
+
+    -   name:           secret_sauce_web_upstart
+        type:           upstart
+        binary_name:    secret_sauce_uwsgi
+        debian_scripts:
+            postinst:
+                -   "touch /tmp/secret_sauce_web_upstart.foo"
+        env_var:
+            command_options:    "--reload-on-rss 256 --reload-on-as 256 --limit-as 384 --harakiri 360 --max-requests 5000"

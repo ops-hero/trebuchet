@@ -1,0 +1,26 @@
+language: python
+python:
+  - "2.7"
+install:
+  - "sudo mkdir -p /var/trebuchet"
+  - "sudo chown travis /var/trebuchet"
+  - "sudo mkdir -p /var/log/trebuchet"
+  - "sudo chown travis /var/log/trebuchet"
+  - "sudo apt-get update"
+  - "sudo apt-get install nginx"
+  - "sudo rm /etc/nginx/sites-enabled/*"
+  - "sudo ln -s /etc/nginx/sites-available/secret_sauce_web_default.conf /etc/nginx/sites-enabled/secret_sauce_web_default.conf"
+  - "sudo /etc/init.d/nginx start"
+  - "python setup.py install"
+script:
+  - "trebuchet lint example/application/.missile.yml"
+  - "trebuchet build example/application/.missile.yml --output /var/trebuchet/debs/ --arch amd64"
+  - "trebuchet lint example/product/secret_sauce.yml"
+  - "trebuchet build example/product/secret_sauce.yml --output /var/trebuchet/debs/ --arch amd64"
+  - "sudo dpkg -i /var/trebuchet/debs/dh-secret-sauce-lib-1*.deb /var/trebuchet/debs/dh-secret-sauce-1*.deb /var/trebuchet/debs/dh-secret-sauce-web-upstart-1*.deb /var/trebuchet/debs/dh-secret-sauce-default-1*.deb"
+  - "sudo cat /etc/trebuchet/secret_sauce_default.conf"
+  - "sudo start dh_secret_sauce_web_upstart_controller"
+  - "./example/tests/test_curl.sh 0.0.0.0"
+
+notifications:
+  email: false
