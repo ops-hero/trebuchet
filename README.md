@@ -1,6 +1,7 @@
 trebuchet
 =========
 
+[![Build Status](https://travis-ci.org/ops-hero/trebuchet.png?branch=master)](https://travis-ci.org/ops-hero/trebuchet)
 
 	trebuchet |ˌtrebyəˈ sh et|
 	noun
