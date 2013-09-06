@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 from trebuchet.lib import get_version
 
 setup(
-    name = "trebuchet",
+    name = "trebuchet-build",
     packages = find_packages(),
     version = get_version(),
     url = 'https://github.com/ops-hero/trebuchet',

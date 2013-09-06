@@ -1,1 +1,1 @@
-recursive-include trebuchet/templates * *.ini *.conf *.html *.py
+recursive-include trebuchet/templates * *.ini *.conf *.html *.py *.pip
