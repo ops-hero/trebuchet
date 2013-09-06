@@ -4,10 +4,10 @@ from setuptools import setup, find_packages
 from trebuchet.lib import get_version
 
 setup(
-    name = "Trebuchet",
+    name = "trebuchet",
     packages = find_packages(),
     version = get_version(),
-    url = '',
+    url = 'https://github.com/ops-hero/trebuchet',
     author = 'Arnaud Seilles',
     author_email = 'arnaud.seilles@gmail.com',
     description = "Yet another package building tool",
@@ -17,13 +17,12 @@ setup(
         "console_scripts" : [ "trebuchet = "
             "trebuchet.run:main"]
     },
-    classifiers = ['Development Status :: 5 - Production/Stable',
-                   'Environment :: Web',
+    classifiers = ['Development Status :: 3 - Alpha',
+                   'Intended Audience :: Information Technology',
                    'License :: OSI Approved :: GNU Affero General Public License v3',
-                   'Operating System :: OS Independent',
+                   'Operating System :: POSIX :: Linux',
                    'Programming Language :: Python :: 2.7',
-                   'Topic :: Internet :: WWW/HTTP',
-                   'Topic :: Software Development :: Libraries :: Python Modules',
+                   'Topic :: Software Development :: Build Tools',
                    ],
     install_requires = open('requirements.pip').readlines(),
     dependency_links = ["http://c.pypi.python.org/simple"],
