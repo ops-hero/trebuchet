@@ -30,7 +30,7 @@ Trebuchet do not install nor deploy; it just build up packages.
 ## Installation ##
 This is a fully fleshed python package, so very easy:
 
-    $ pip install trebuchet
+    $ pip install le-trebuchet
 
 Or:
 
