@@ -15,7 +15,7 @@ script:
   - "trebuchet build example/application/.missile.yml --output ~/ --arch amd64"
   - "trebuchet lint example/product/secret_sauce.yml"
   - "trebuchet build example/product/secret_sauce.yml --output ~/ --arch amd64"
-  - "sudo dpkg -i /var/trebuchet/debs/dh-secret-sauce-lib-1*.deb ~/dh-secret-sauce-1*.deb ~/dh-secret-sauce-web-upstart-1*.deb ~/dh-secret-sauce-default-1*.deb"
+  - "sudo dpkg -i ~/dh-secret-sauce-lib-1*.deb ~/dh-secret-sauce-1*.deb ~/dh-secret-sauce-web-upstart-1*.deb ~/dh-secret-sauce-default-1*.deb"
   - "sudo cat /etc/trebuchet/secret_sauce_default.conf"
   - "sudo start dh_secret_sauce_web_upstart_controller"
   - "./example/tests/test_curl.sh 0.0.0.0"
