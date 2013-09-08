@@ -1,2 +1,3 @@
-recursive-include tests example trebuchet/templates * *.ini *.conf *.html *.py
+recursive-include trebuchet  * *.ini *.conf *.html *.py
+global-include example/* trebuchet/templates/*
 include *.md *.pip
