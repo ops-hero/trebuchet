@@ -2,7 +2,7 @@ import itertools
 
 from .package import get_packages
 from .my_yaml import load_yaml_config, print_pretty, get_yaml_config
-from .callbacks import do_web_callback
+from .callbacks import do_web_callback, jsonfy_pkg
 
 
 
@@ -50,6 +50,7 @@ def build_app(project, prepare, package, version_options=None):
                 extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
+        print "Built: " + str(jsonfy_pkg(pkg))
         if package.web_callback_url:
             do_web_callback(package.web_callback_url, pkg)
 
