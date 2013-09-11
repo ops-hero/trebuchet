@@ -454,8 +454,7 @@ class CountrySettingsPackage(Package):
 
 	def pre_build(self, extra_template_dir=None):
 		options = self.config
-		options.update({'log_folder': os.path.join('/', 'var', 'log', 'trebuchet'),
-						'full_name': self.name})
+		options.update({'full_name': self.name})
 
 		options.update(self.config_applications)
 
