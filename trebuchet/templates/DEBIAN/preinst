@@ -10,7 +10,7 @@ fi
 
 
 # create folders if not exist
-CORE_DIRS="/var/log/trebuchet /opt/trebuchet /etc/trebuchet"
+CORE_DIRS="/opt/trebuchet /etc/trebuchet"
 
 for dir in $CORE_DIRS; do
     if [ ! -d $dir ]; then

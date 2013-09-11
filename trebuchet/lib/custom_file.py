@@ -53,8 +53,7 @@ class CustomFile(object):
         print full_path
         prepare_folder(os.path.dirname(full_path))
 
-        params = {'log_folder': os.path.join('var', 'log', 'trebuchet'),
-                    'full_name': self.name}
+        params = {'full_name': self.name}
         if self.options:
             params.update(self.options)
         if options:
