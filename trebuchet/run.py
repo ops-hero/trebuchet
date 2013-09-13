@@ -49,14 +49,14 @@ def main():
     """
 
     arguments = docopt(__doc__, version=__version__)
-    
+
     project_config = parse_project(arguments)
 
     # We are trying to build the packages
     if arguments['build']:
 
         # parse the arguments into configuration objects.
-        package_config = parse_package(arguments)    
+        package_config = parse_package(arguments)
         prepare_config = parse_prepare(arguments)
         versions = parse_version(arguments)
 
@@ -72,7 +72,7 @@ def main():
 
     # We are trying to prepare the project for development (prior packaging)
     elif arguments['develop']:
-            
+
         # parse the arguments into configuration objects.
         prepare_config = parse_prepare(arguments)
         versions = parse_version(arguments)

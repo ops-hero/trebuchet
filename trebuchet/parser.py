@@ -1,7 +1,7 @@
 import os
 
 class Configuration:
-    def __init__(self, **entries): 
+    def __init__(self, **entries):
         self.__dict__.update(entries)
 
 

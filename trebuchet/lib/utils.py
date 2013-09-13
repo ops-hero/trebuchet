@@ -115,7 +115,7 @@ def local_template(filename, destination, context=None, use_jinja=False,
             jenv.filters["shquote"] = lambda s: pipes.quote(str(s))
 
             template = jenv.get_template(filename)
-            
+
             # add debugging function to template
             @contextfunction
             def get_context(c):

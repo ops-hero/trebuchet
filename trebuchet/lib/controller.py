@@ -41,12 +41,12 @@ def build_app(project, prepare, package, version_options=None):
     pkg_list = []
 
     for pkg in _get_all_packages(project,
-                            build_path=prepare.build_path, 
+                            build_path=prepare.build_path,
                             architecture=prepare.architecture,
-                            options={"pip_options": prepare.pip_options, 
+                            options={"pip_options": prepare.pip_options,
                                     "version_options": version_options}):
-        pkg.build(package.debs_path, 
-                extra_template_dir=project.full_path, 
+        pkg.build(package.debs_path,
+                extra_template_dir=project.full_path,
                 extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
@@ -64,9 +64,9 @@ def develop_app(project, prepare, version_options=None):
     pkg_list = []
 
     for pkg in _get_all_packages(project,
-                            build_path=prepare.build_path, 
+                            build_path=prepare.build_path,
                             architecture=prepare.architecture,
-                            options={"pip_options": prepare.pip_options, 
+                            options={"pip_options": prepare.pip_options,
                                     "version_options": version_options}):
         pkg.develop(extra_template_dir=project.full_path,
                 extra_description=prepare.extra_description)

@@ -66,9 +66,9 @@ class CustomFile(object):
 
         local_template(self.template,
             full_path,
-            context=params, 
-            use_jinja=True, 
-            backup=False, 
+            context=params,
+            use_jinja=True,
+            backup=False,
             template_dir=template_dir)
 
         if self.is_executable:
@@ -81,7 +81,7 @@ class CustomFile(object):
 
     @property
     def relative_filepath(self):
-        return os.path.join(self.relative_path, 
+        return os.path.join(self.relative_path,
                             "%s%s" % (self.name, self.extension))
 
 
