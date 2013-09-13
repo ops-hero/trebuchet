@@ -103,6 +103,7 @@ class Package(object):
         self.dependency_pkg = []
         self.extra_files = {}
         self.settings_package = {}
+        self.template_options = {}
 
     def build(self, debs_path, extra_template_dir=None, extra_description=None):
         self.develop(extra_template_dir, extra_description)
@@ -133,7 +134,7 @@ class Package(object):
         print "my_cwd: " + my_cwd
         for file_custom in local('ls %s' % os.path.join(my_cwd, "..", "templates", "DEBIAN"),
                                  capture=True).split():
-            options = {
+            self.template_options.update( {
                 'full_package_name': self.full_package_name,
                 'architecture':    self.architecture,
                 'package_version': self.package_version,
@@ -142,12 +143,12 @@ class Package(object):
                 'package_service_dependencies': self.get_service_dependencies(),
                 'settings': self.settings_package,
                 'maintainer': 'Arnaud Seilles <arnaud.seilles@gmail.com>',
-            }
+            } )
             template = "DEBIAN/%s" % file_custom
 
             file_ = get_custom_file('debian', file_custom, template)
             file_.build(self.full_path,
-                        options,
+                        self.template_options,
                         extra_template_dir=extra_template_dir)
 
     @property
@@ -259,6 +260,8 @@ class ApplicationPackage(Package):
         with lcd(self.code_path):
             for step in self.build_assets_steps:
                 local(prefix + step)
+        self.template_options['code_path'] = self.code_path
+
 
     @property
     def extra_config(self):
@@ -276,7 +279,7 @@ class ApplicationPackage(Package):
     def version_from_vcs(self):
         if not hasattr(self, '_version_from_vcs'):
             with lcd(self.application_path):
-                self._version_from_vcs = local("git rev-parse --verify --short HEAD", capture=True)
+                self._version_from_vcs = local("git rev-parse --verify --short HEAD || hg log -r -1 --template \"{short(node)}\\n\"", capture=True)
 
         return self._version_from_vcs
 
@@ -323,13 +326,14 @@ class PythonEnvironmentPackage(Package):
             requirement_file = os.path.join(self.application_path, requirement)
             with lcd(self.working_path):
                 with prefix(". %s/bin/activate" % self.working_path):
-                    local('pip install %s -q -r %s' % (self.pip_options, requirement_file))
+                    local('pip install %s --install-option --no-compile --install-option -O0 -q -r %s' % (self.pip_options, requirement_file))
 
         # post environment steps
         with lcd(self.working_path):
             for step in self.post_environment_steps:
                 with prefix(". %s/bin/activate" % self.working_path):
                     local(step)
+        self.template_options['venv_path'] = self.target_venv
 
 
     def pre_package(self, extra_template_dir=None):
