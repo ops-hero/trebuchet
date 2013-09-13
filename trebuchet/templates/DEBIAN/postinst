@@ -19,3 +19,10 @@ if pgrep nginx > /dev/null; then
     /etc/init.d/nginx reload 
 fi
 {% endif %}
+
+{% if code_path %}
+python -m compileall {{ code_path }}
+{% endif %}
+{%if venv_path %}
+python -m compileall {{ venv_path }}
+{% endif %}
