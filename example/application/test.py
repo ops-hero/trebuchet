@@ -8,7 +8,7 @@ class FlaskTestCase(unittest.TestCase):
 
     def setUp(self):
         self.client = my_app.test_client()
-        
+
     def tearDown(self):
         pass
 
