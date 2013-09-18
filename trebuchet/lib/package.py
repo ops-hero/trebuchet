@@ -260,7 +260,8 @@ class ApplicationPackage(Package):
         with lcd(self.code_path):
             for step in self.build_assets_steps:
                 local(prefix + step)
-        self.template_options['code_path'] = self.code_path
+        self.template_options['code_path'] = os.path.join("/opt", "trebuchet",
+                    self.name, "code")
 
 
     @property
