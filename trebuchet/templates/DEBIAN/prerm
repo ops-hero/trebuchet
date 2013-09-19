@@ -12,9 +12,6 @@ initctl emit {{ package | upper }}_STOP_ALL
 {% endfor %}
 {% endif %}
 
-{% if code_path %}
-find {{ code_path }} -name "*.pyc" -delete
-{% endif %}
-{%if venv_path %}
-find {{ venv_path }} -name "*.pyc" -delete
+{% if is_python %}
+find {{ pyfiles_path }} -name "*.pyc" -delete
 {% endif %}

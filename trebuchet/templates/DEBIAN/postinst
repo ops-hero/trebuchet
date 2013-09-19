@@ -20,9 +20,6 @@ if pgrep nginx > /dev/null; then
 fi
 {% endif %}
 
-{% if code_path %}
-python -m compileall {{ code_path }}
-{% endif %}
-{%if venv_path %}
-python -m compileall {{ venv_path }}
+{% if is_python %}
+python -m compileall -q {{ pyfiles_path}}
 {% endif %}

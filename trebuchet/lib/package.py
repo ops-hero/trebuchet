@@ -260,7 +260,8 @@ class ApplicationPackage(Package):
         with lcd(self.code_path):
             for step in self.build_assets_steps:
                 local(prefix + step)
-        self.template_options['code_path'] = os.path.join("/opt", "trebuchet",
+        self.template_options['is_python'] = True
+        self.template_options['pyfiles_path'] = os.path.join("/opt", "trebuchet",
                     self.name, "code")
 
 
@@ -334,7 +335,8 @@ class PythonEnvironmentPackage(Package):
             for step in self.post_environment_steps:
                 with prefix(". %s/bin/activate" % self.working_path):
                     local(step)
-        self.template_options['venv_path'] = self.target_venv
+        self.template_options['is_python'] = True
+        self.template_options['pyfiles_path'] = self.target_venv
 
 
     def pre_package(self, extra_template_dir=None):
