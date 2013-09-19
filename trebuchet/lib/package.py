@@ -68,6 +68,7 @@ def get_packages(application_path, config=None, returns_only=None,
                                 file_.get('target_path', None),
                                 file_.get('target_extension', None),
                                 file_.get('target_is_executable', None),
+                                file_.get('target_filename', None),
                                 options=config)
         pkg.attach_file(file_['name'] + config.get('name_suffix', ""), file_bin)
         extra_files_list[ file_['name'] ] = file_

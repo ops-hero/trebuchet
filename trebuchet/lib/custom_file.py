@@ -4,7 +4,7 @@ from fabric.api import local
 from .utils import local_template, prepare_folder
 
 def get_custom_file(type_, name, template, target_path=None, target_extension=None,
-                target_is_executable=None, options=None):
+                target_is_executable=None, target_filename=None, options=None):
     """ factory for CustomFiles """
     if type_ == 'nginx':
         return NGINXCustomFile(name, template, options=options)
@@ -19,7 +19,7 @@ def get_custom_file(type_, name, template, target_path=None, target_extension=No
     elif type_ == "newrelic_config":
         return NewrelicConfigCustomFile(name, template, options=options)
     elif type_ == "custom":
-        return CustomFile(name, template, target_path, target_extension, target_is_executable, options)
+        return CustomFile(name, template, target_path, target_extension, target_is_executable, target_filename, options)
     else:
         raise NotImplementedError
 
@@ -30,7 +30,7 @@ class CustomFile(object):
     extension = ""
 
     def __init__(self, name, template=None, target_path=None, target_extension=None,
-                target_is_executable=None, options=None):
+                target_is_executable=None, target_filename=None, options=None):
         self.name = name
         self.template = template
 
@@ -42,6 +42,9 @@ class CustomFile(object):
 
         if target_extension:
             self.extension = target_extension
+
+        if target_filename:
+            self.filename = target_filename
 
         self.options = options if options else {}
 
@@ -81,6 +84,8 @@ class CustomFile(object):
 
     @property
     def relative_filepath(self):
+        if hasattr(self, "filename"):
+            return os.path.join(self.relative_path, self.filename)
         return os.path.join(self.relative_path,
                             "%s%s" % (self.name, self.extension))
 
