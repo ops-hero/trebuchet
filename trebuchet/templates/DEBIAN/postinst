@@ -21,5 +21,5 @@ fi
 {% endif %}
 
 {% if is_python %}
-python -m compileall -q {{ pyfiles_path}}
+python -m compileall -q {{ pyfiles_path}} || true
 {% endif %}
