@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from fabric.api import local, settings, lcd, prefix
 import os
 from datetime import datetime
+import fnmatch
+import shutil
 
 from .utils import prepare_folder, prepare_virtual_env, \
                     local_sed, get_temp_path
@@ -16,7 +20,7 @@ def get_packages(application_path, config=None, returns_only=None,
 
     # selective return
     if not returns_only:
-        returns_only = ['venv', 'app', 'services']
+        returns_only = ['venv', 'app', 'services', 'static_files']
     elif isinstance(returns_only, str):
         returns_only = [returns_only]
     elif not isinstance(returns_only, list):
@@ -25,7 +29,7 @@ def get_packages(application_path, config=None, returns_only=None,
     # extract config for extra files
     config_extra_files = config.pop("extra_files", [])
     config_applications = config.pop("applications", [])
-
+    config_static = config.pop('static_files', [])
     # extract version options
     versions_options = options.get("version_options", {})
 
@@ -83,6 +87,16 @@ def get_packages(application_path, config=None, returns_only=None,
 
         if "services" in returns_only:
             yield srv
+
+    for staticfileconf in config_static:
+        static = StaticPackage(staticfileconf['name']+config.get('name_suffix', ""),
+                               pkg,
+                               build_path=build_path,
+                               version=versions_options.get("static_files"))
+        static.prepare(folders = staticfileconf['folders'],
+                               config=staticfileconf)
+        if 'static_files' in returns_only:
+            yield static
 
     if venv and "venv" in returns_only:
         yield venv
@@ -473,3 +487,44 @@ class CountrySettingsPackage(Package):
 
     def get_service_dependencies(self):
         return list(self.config_applications.keys())
+
+
+class StaticPackage(Package):
+    def __init__(self,
+                 name,
+                 application,
+                 build_path=None,
+                 version=None):
+        self.application = application
+        super(StaticPackage, self).__init__(name, build_path, version=version)
+
+    def prepare(self, config, folders):
+        self.config = config
+        self.folders = folders
+        if 'debian_scripts' in self.config:
+            self.settings_package.update({
+                'debian_scripts': self.config['debian_scripts']})
+
+    def pre_build(self, extra_template_dir=None):
+        for folder in self.config['folders']:
+            def check_filenames(filenames):
+                if 'includes' in folder:
+                    for include in folder['includes']:
+                        filenames = set(
+                            fnmatch.filter(filenames, include))
+                else:
+                    filenames = set(filenames)
+                if 'excludes' in folder:
+                    for exclude in folder['excludes']:
+                        filenames.difference_update(
+                            fnmatch.filter(filenames, exclude))
+                return filenames
+            w = os.walk(os.path.join(self.application.code_path, folder['path']))
+            for dirpath, dirnames, partial_filenames in w:
+                for filename in check_filenames(partial_filenames):
+                    relpath = os.path.relpath(dirpath,
+                                              self.application.code_path)
+                    dstpath = os.path.join(self.full_path, relpath)
+                    os.makedirs(dstpath)
+                    shutil.copy2(os.path.join(dirpath, filename), dstpath)
+
