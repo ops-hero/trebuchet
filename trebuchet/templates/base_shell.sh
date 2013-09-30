@@ -23,6 +23,13 @@ else
     exit 1
 fi
 
+LOCAL_OVERRIDE=/etc/trebuchet/local_override
+
+if [ -f $LOCAL_OVERRIDE ]; then
+    source $LOCAL_OVERRIDE
+fi
+
+
 # clean up file
 cd {{ app_code }}
 
