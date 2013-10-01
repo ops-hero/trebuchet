@@ -69,6 +69,7 @@ def get_packages(application_path, config=None, returns_only=None,
                                 file_.get('target_extension', None),
                                 file_.get('target_is_executable', None),
                                 file_.get('target_filename', None),
+                                file_['name'],
                                 options=config)
         pkg.attach_file(file_['name'] + config.get('name_suffix', ""), file_bin)
         extra_files_list[ file_['name'] ] = file_
@@ -466,13 +467,14 @@ class CountrySettingsPackage(Package):
 
         options.update(self.config_applications)
 
-        # add extrafiles information
+        # add extrafiles information (maiden_name is the un-suffixed name)
         options['extra_files'] = {}
         for key,binary in self.extra_files.iteritems():
-            options['extra_files'][binary.name] = binary.relative_filepath
+            options['extra_files'][binary.unsuffixed_name] = binary.relative_filepath
 
         # main config file
         main_config = get_custom_file('product', self.name, self.template)
+
         main_config.build(
                 self.full_path,
                 {'options': flatten_dict(options),},
@@ -480,4 +482,7 @@ class CountrySettingsPackage(Package):
             )
 
     def get_service_dependencies(self):
+        #import ipdb; ipdb.set_trace()
+        if self.config_applications == []:
+            return {}
         return list(self.config_applications.keys())
