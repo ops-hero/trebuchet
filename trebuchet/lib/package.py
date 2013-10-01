@@ -466,6 +466,11 @@ class CountrySettingsPackage(Package):
 
         options.update(self.config_applications)
 
+        # add extrafiles information
+        options['extra_files'] = {}
+        for key,binary in self.extra_files.iteritems():
+            options['extra_files'][binary.name] = binary.relative_filepath
+
         # main config file
         main_config = get_custom_file('product', self.name, self.template)
         main_config.build(

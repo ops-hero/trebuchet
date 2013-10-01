@@ -101,6 +101,7 @@ To update the package, do as follow:
 
 
 ## TODO ##
+* Add documentation for (extra file in configuration, cookbook of best  usage...)
 * Add more configuration scheme, tests and documentation.
 * To work locally as well (setup the folder in a workable way without packaging/installing).
 * Handle dependencies for building and installing the package.
