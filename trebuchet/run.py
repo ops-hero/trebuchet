@@ -84,7 +84,8 @@ def main():
     # We check if the configuration file is ok.
     elif arguments['lint']:
 
-        check_config(project_config)
+        pkg_list = check_config(project_config)
+        print "Packages to be built: " + ",".join(pkg_list)
 
 
 if __name__ == '__main__':

@@ -30,9 +30,8 @@ def _get_all_packages(project, build_path=None, architecture=None, options=None)
 def check_config(project):
     """
     """
-    pkg_list = [ pkg.full_package_name for pkg in _get_all_packages(project) ]
-    print "Packages to be built: " + ",".join(pkg_list)
-
+    return [ pkg.full_package_name for pkg in _get_all_packages(project) ]
+    
 
 def build_app(project, prepare, package, version_options=None):
     """
