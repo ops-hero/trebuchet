@@ -12,19 +12,11 @@ from .my_yaml import flatten_dict
 from .custom_file import get_custom_file
 
 
-def get_packages(application_path, config=None, returns_only=None,
+def get_packages(application_path, config=None,
                 build_path=None, architecture=None, options=None):
     """ Generator of packages for an application. """
     venv = None
     options = options if options else {}
-
-    # selective return
-    if not returns_only:
-        returns_only = ['venv', 'app', 'services', 'static_files']
-    elif isinstance(returns_only, str):
-        returns_only = [returns_only]
-    elif not isinstance(returns_only, list):
-        raise AttributeError
 
     # extract config for extra files
     config_extra_files = config.pop("extra_files", [])
@@ -86,9 +78,7 @@ def get_packages(application_path, config=None, returns_only=None,
                     binary_file = extra_files_list[ service['binary_name'] ],
                     debian_scripts=service.get('debian_scripts', {}),
                     env_var=service.get('env_var', {}))
-
-        if "services" in returns_only:
-            yield srv
+        yield srv
 
     for staticfileconf in config_static:
         static = StaticPackage(staticfileconf['name']+config.get('name_suffix', ""),
@@ -97,14 +87,10 @@ def get_packages(application_path, config=None, returns_only=None,
                                version=versions_options.get("static_files"))
         static.prepare(folders = staticfileconf['folders'],
                                config=staticfileconf)
-        if 'static_files' in returns_only:
-            yield static
+        yield static
 
-    if venv and "venv" in returns_only:
-        yield venv
-
-    if "app" in returns_only:
-        yield pkg
+    yield venv
+    yield pkg
 
 
 class Package(object):
