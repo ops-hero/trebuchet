@@ -136,6 +136,9 @@ class Package(object):
         raise NotImplementedError
 
     def pre_package(self, extra_template_dir=None):
+        """
+        Final changes before packaging, most likely to make the package non functional until deployed.
+        """
         pass
 
     def create_deb(self, extra_template_dir=None):
