@@ -47,16 +47,16 @@ def local_sed(filename, before, after, limit='', flags=''):
     """
     # Characters to be escaped in both
     for char in "/'":
-        before = before.replace(char, r'\%s' % char)
-        after = after.replace(char, r'\%s' % char)
+        before = before.replace(char, '\%s' % char)
+        after = after.replace(char, '\%s' % char)
     # Characters to be escaped in replacement only (they're useful in regexen
     # in the 'before' part)
     for char in "()":
-        after = after.replace(char, r'\%s' % char)
+        after = after.replace(char, '\%s' % char)
     if limit:
-        limit = r'/%s/ ' % limit
+        limit = '/%s/ ' % limit
 
-    expr = r"sed -i -r -e '%ss/%s/%s/%sg' %s"
+    expr = "LC_ALL=C sed -i -r -e '%ss/%s/%s/%sg' %s"
     command = expr % (limit, before, after, flags, filename)
     return local(command)
 
