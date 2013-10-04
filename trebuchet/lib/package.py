@@ -245,6 +245,8 @@ class ApplicationPackage(Package):
 
         self.dependency_pkg = [environment]
 
+        self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "code")
+
     def prepare(self, exclude_folders=None, build_assets_steps=None, debian_scripts=None):
         self.build_assets_steps = build_assets_steps
         self.exclude_folders = exclude_folders
@@ -252,8 +254,7 @@ class ApplicationPackage(Package):
             self.settings_package.update({'debian_scripts': debian_scripts})
 
     def pre_build(self, extra_template_dir=None):
-        code_path = os.path.join(self.full_path, "opt", "trebuchet",
-                            self.name, "code")
+        code_path = os.path.join(self.full_path, self.relative_final_path)
         
         prepare_folder(code_path)
 
@@ -270,8 +271,7 @@ class ApplicationPackage(Package):
             for step in self.build_assets_steps:
                 local(prefix + step)
         self.template_options['is_python'] = True
-        self.template_options['pyfiles_path'] = os.path.join("/opt", "trebuchet",
-                    self.name, "code")
+        self.template_options['pyfiles_path'] = os.path.join("/", self.relative_final_path)
 
 
     @property
@@ -279,8 +279,7 @@ class ApplicationPackage(Package):
         return {
                 'base_template': "base_shell.sh",
                 'app_env': self.environment.target_venv if self.environment else "",
-                'app_code': os.path.join("/", "opt", "trebuchet",
-                        self.name, "code")
+                'app_code': os.path.join("/", self.relative_final_path)
             }
 
     def get_dependencies(self):
