@@ -13,7 +13,7 @@ from .custom_file import get_custom_file
 
 
 def get_packages(application_path, config=None,
-                build_path=None, architecture=None, options=None):
+                architecture=None, options=None):
     """ Generator of packages for an application. """
     venv = None
     options = options if options else {}
@@ -29,7 +29,7 @@ def get_packages(application_path, config=None,
 
         # country/product configuration package
         pkg = CountrySettingsPackage(config['name'] + config.get('name_suffix', ""),
-                                    build_path=build_path, version=versions_options.get("app"))
+                                    version=versions_options.get("app"))
         pkg.prepare(config, config_applications)
 
     elif config['type'] == 'application':
@@ -38,17 +38,22 @@ def get_packages(application_path, config=None,
         if 'environment' in config:
             if config['environment']['type'] == "python":
                 venv = PythonEnvironmentPackage(config['environment']['name'] + config.get('name_suffix', ""),
-                                        application_path, build_path=build_path, architecture=architecture, version=versions_options.get("env"))
+                                        application_path,
+                                        architecture=architecture,
+                                        version=versions_options.get("env"))
                 venv.prepare(binary=config['environment'].get('binary', ""),
                             requirements=config['environment'].get('requirements', []),
-                            post_environment_steps=config['environment'].get('post_environment', []), pip_options=options.get("pip_options", ""))
+                            post_environment_steps=config['environment'].get('post_environment', []),
+                            pip_options=options.get("pip_options", ""))
             else:
                 raise NotImplementedError("environment type: %s"
                                         % config['environment']['type'])
 
         # main application package
-        pkg = ApplicationPackage(config['name']  + config.get('name_suffix', ""), application_path, build_path=build_path,
-                            environment=venv, version=versions_options.get("app"))
+        pkg = ApplicationPackage(config['name']  + config.get('name_suffix', ""), 
+                            application_path,
+                            environment=venv,
+                            version=versions_options.get("app"))
         pkg.prepare(exclude_folders=config.get('exclude_folders', []),
                     build_assets_steps=config.get('build_assets', []))
 
@@ -72,8 +77,9 @@ def get_packages(application_path, config=None,
 
     # package for each services
     for service in config.get('services', []):
-        srv = ServicePackage(service['name'] + config.get('name_suffix', ""), pkg,
-                            build_path=build_path, version=versions_options.get("service"))
+        srv = ServicePackage(service['name'] + config.get('name_suffix', ""),
+                            pkg,
+                            version=versions_options.get("service"))
         srv.prepare(binary=service['binary_name'] + config.get('name_suffix', ""),
                     binary_file = extra_files_list[ service['binary_name'] ],
                     debian_scripts=service.get('debian_scripts', {}),
@@ -98,8 +104,6 @@ class Package(object):
 
     def __init__(self, name, build_path=None, version=None):
         self.name = name
-        self.build_path = build_path if build_path else get_temp_path("build")
-        self.full_path = os.path.join(self.build_path, self.name)
         self.version = version if version else ''
 
         self.dependency_pkg = []
@@ -107,12 +111,17 @@ class Package(object):
         self.settings_package = {}
         self.template_options = {}
 
-    def build(self, debs_path, extra_template_dir=None, extra_description=None):
-        self.develop(extra_template_dir, extra_description)
+    def build(self, debs_path, build_path=None, extra_template_dir=None, extra_description=None):
+        self.build_path = build_path if build_path else get_temp_path("build")
+        self.full_path = os.path.join(self.build_path, self.name)
+        
+        self.develop(build_path, extra_template_dir, extra_description)
         self.pre_package(extra_template_dir)
         self.package(debs_path)
 
-    def develop(self, extra_template_dir=None, extra_description=None):
+    def develop(self, build_path=None, extra_template_dir=None, extra_description=None):
+        self.build_path = build_path if build_path else get_temp_path("build")
+        self.full_path = os.path.join(self.build_path, self.name)
         self.extra_description = extra_description
 
         prepare_folder(self.full_path)
@@ -228,17 +237,12 @@ class ApplicationPackage(Package):
     """
 
     def __init__(self, name, application_path,
-                build_path=None,
                 environment=None,
                 version=None):
         self.application_path = application_path
-        super(ApplicationPackage, self).__init__(name, build_path=build_path, version=version)
+        super(ApplicationPackage, self).__init__(name, version=version)
         self.environment = environment
 
-        self.bin_path = os.path.join(self.full_path, "opt", "trebuchet",
-                            self.name, "bin")
-        self.code_path = os.path.join(self.full_path, "opt", "trebuchet",
-                            self.name, "code")
         self.dependency_pkg = [environment]
 
     def prepare(self, exclude_folders=None, build_assets_steps=None, debian_scripts=None):
@@ -248,18 +252,21 @@ class ApplicationPackage(Package):
             self.settings_package.update({'debian_scripts': debian_scripts})
 
     def pre_build(self, extra_template_dir=None):
-        prepare_folder(self.code_path)
+        code_path = os.path.join(self.full_path, "opt", "trebuchet",
+                            self.name, "code")
+        
+        prepare_folder(code_path)
 
-        local("cp -R %s/* %s" % (self.application_path, self.code_path))
-        local("rm -rf %s/.git" % self.code_path)
+        local("cp -R %s/* %s" % (self.application_path, code_path))
+        local("rm -rf %s/.git" % code_path)
         for folder in self.exclude_folders:
-            local("rm -rf %s/%s" % (self.code_path, folder))
+            local("rm -rf %s/%s" % (code_path, folder))
 
-        with lcd(self.code_path):
+        with lcd(code_path):
             local("echo %s > GIT_VERSION" % self.version_from_vcs)
 
         prefix = ". %s/bin/activate && " % self.environment.working_path if self.environment else ""
-        with lcd(self.code_path):
+        with lcd(code_path):
             for step in self.build_assets_steps:
                 local(prefix + step)
         self.template_options['is_python'] = True
@@ -292,14 +299,11 @@ class PythonEnvironmentPackage(Package):
     """
     If updated, needs to restart all dependent upstart services for this application.
     """
-    def __init__(self, name, application_path, build_path=None, architecture=None, version=None):
+    def __init__(self, name, application_path, architecture=None, version=None):
         self.application_path = application_path
-        super(PythonEnvironmentPackage, self).__init__(name, build_path=build_path, version=version)
+        super(PythonEnvironmentPackage, self).__init__(name, version=version)
 
         self.working_copy_base = os.path.join("/", "tmp", "trebuchet", "working_copy")
-        self.env_path = os.path.join(self.full_path, "opt", "trebuchet",
-                            self.name, "env")
-        self.venv_bin_path = os.path.join(self.env_path, 'bin')
         self.working_path = os.path.join(self.working_copy_base,
                             self.name, "env")
         self.target_base_path = os.path.join("/", "opt", "trebuchet")
@@ -342,13 +346,17 @@ class PythonEnvironmentPackage(Package):
 
 
     def pre_package(self, extra_template_dir=None):
+        env_path = os.path.join(self.full_path, "opt", "trebuchet",
+                            self.name, "env")
+        venv_bin_path = os.path.join(env_path, 'bin')
+        
         # copy the working environment to the package location
-        prepare_folder(self.env_path)
-        local("cp -LR %s/* %s" % (self.working_path, self.env_path))
+        prepare_folder(env_path)
+        local("cp -LR %s/* %s" % (self.working_path, env_path))
 
         # fix symlink
         list_dir = ['bin', 'lib', 'include']
-        folder = os.path.join(self.env_path, 'local')
+        folder = os.path.join(env_path, 'local')
         with settings(warn_only=True):
             if local("test -d %s" % folder).failed:
                 with lcd(folder):
@@ -357,12 +365,12 @@ class PythonEnvironmentPackage(Package):
                         local("ln -s ../%s %s" % (dir_, dir_))
 
         # # fix the shebang paths with sed
-        with lcd(self.venv_bin_path):
+        with lcd(venv_bin_path):
             for script in local('ls', capture=True).split():
                 local_sed(
                     script,
-                    self.working_copy_base,
-                    self.target_base_path
+                    self.working_path,
+                    self.target_venv
                 )
             local("rm -f *.bak")
 
@@ -382,8 +390,8 @@ class ServicePackage(Package):
     If updated, needs to restart this specific upstart services for this application.
     """
 
-    def __init__(self, name, application, build_path=None, version=None):
-        super(ServicePackage, self).__init__(name, build_path=build_path, version=version)
+    def __init__(self, name, application, version=None):
+        super(ServicePackage, self).__init__(name, version=version)
         self.application = application
         self.dependency_pkg = [application]
         self.env_var = {}
@@ -452,8 +460,8 @@ class CountrySettingsPackage(Package):
     """
     template = "config.ini"
 
-    def __init__(self, name, build_path=None, version=None):
-        super(CountrySettingsPackage, self).__init__(name, build_path, version=version)
+    def __init__(self, name, version=None):
+        super(CountrySettingsPackage, self).__init__(name, version=version)
         self.settings_package.update({"use_nginx": True})
 
     def prepare(self, configuration, config_applications):
@@ -483,7 +491,6 @@ class CountrySettingsPackage(Package):
             )
 
     def get_service_dependencies(self):
-        #import ipdb; ipdb.set_trace()
         if self.config_applications == []:
             return {}
         return list(self.config_applications.keys())
