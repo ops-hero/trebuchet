@@ -308,9 +308,9 @@ class PythonEnvironmentPackage(Package):
         self.working_copy_base = os.path.join("/", "tmp", "trebuchet", "working_copy")
         self.working_path = os.path.join(self.working_copy_base,
                             self.name, "env")
-        self.target_base_path = os.path.join("/", "opt", "trebuchet")
-        self.target_venv = os.path.join(self.target_base_path, self.name,
-                                        "env")
+
+        self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "env")
+        self.target_venv = os.path.join("/", self.relative_final_path)
 
         if architecture:
             self.architecture = architecture
@@ -348,8 +348,7 @@ class PythonEnvironmentPackage(Package):
 
 
     def pre_package(self, extra_template_dir=None):
-        env_path = os.path.join(self.full_path, "opt", "trebuchet",
-                            self.name, "env")
+        env_path = os.path.join(self.full_path, self.relative_final_path)
         venv_bin_path = os.path.join(env_path, 'bin')
         
         # copy the working environment to the package location
