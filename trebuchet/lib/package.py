@@ -470,6 +470,7 @@ class CountrySettingsPackage(Package):
         self.config = configuration
         self.config_applications = config_applications
         self.settings_package.update({'country': configuration})
+        self.code_path = os.path.join(self.full_path)
 
     def pre_build(self, extra_template_dir=None):
         options = self.config
