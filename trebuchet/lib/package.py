@@ -25,40 +25,31 @@ def get_packages(application_path, config=None,
     # extract version options
     versions_options = options.get("version_options", {})
 
-    if config['type'] == 'configuration':
+    # environment package
+    if 'environment' in config:
+        if config['environment']['type'] == "python":
+            venv = PythonEnvironmentPackage(config['environment']['name'] + config.get('name_suffix', ""),
+                                    application_path,
+                                    architecture=architecture,
+                                    version=versions_options.get("env"))
+            venv.prepare(binary=config['environment'].get('binary', ""),
+                        requirements=config['environment'].get('requirements', []),
+                        post_environment_steps=config['environment'].get('post_environment', []),
+                        pip_options=options.get("pip_options", ""))
+        else:
+            raise NotImplementedError("environment type: %s"
+                                    % config['environment']['type'])
 
-        # country/product configuration package
-        pkg = CountrySettingsPackage(config['name'] + config.get('name_suffix', ""),
-                                    version=versions_options.get("app"))
-        pkg.prepare(config, config_applications)
+    # main application package
+    pkg = ApplicationPackage(config['name']  + config.get('name_suffix', ""), 
+                        application_path,
+                        environment=venv,
+                        version=versions_options.get("app"))
+    pkg.prepare(exclude_folders=config.get('exclude_folders', []),
+                build_assets_steps=config.get('build_assets', []),
+                configuration=config,
+                config_applications=config_applications)
 
-    elif config['type'] == 'application':
-
-        # environment package
-        if 'environment' in config:
-            if config['environment']['type'] == "python":
-                venv = PythonEnvironmentPackage(config['environment']['name'] + config.get('name_suffix', ""),
-                                        application_path,
-                                        architecture=architecture,
-                                        version=versions_options.get("env"))
-                venv.prepare(binary=config['environment'].get('binary', ""),
-                            requirements=config['environment'].get('requirements', []),
-                            post_environment_steps=config['environment'].get('post_environment', []),
-                            pip_options=options.get("pip_options", ""))
-            else:
-                raise NotImplementedError("environment type: %s"
-                                        % config['environment']['type'])
-
-        # main application package
-        pkg = ApplicationPackage(config['name']  + config.get('name_suffix', ""), 
-                            application_path,
-                            environment=venv,
-                            version=versions_options.get("app"))
-        pkg.prepare(exclude_folders=config.get('exclude_folders', []),
-                    build_assets_steps=config.get('build_assets', []))
-
-    else:
-        raise NotImplementedError
 
     # extra files attachment
     extra_files_list = {}
@@ -95,7 +86,7 @@ def get_packages(application_path, config=None,
                                config=staticfileconf)
         yield static
 
-    yield venv
+    if venv: yield venv
     yield pkg
 
 
@@ -218,9 +209,13 @@ class Package(object):
         self.extra_files[name] = file_bin
 
     def build_extra_files(self, extra_template_dir=None):
+        options = {}
+        options.update(self.extra_config)
+        options.update(self.template_options)
+
         for key,binary in self.extra_files.iteritems():
             binary.build(self.full_path,
-                self.extra_config,
+                options,
                 extra_template_dir=extra_template_dir)
 
     @property
@@ -231,7 +226,12 @@ class Package(object):
         return []
 
     def get_service_dependencies(self):
-        return [self.name]
+        if not hasattr(self, 'config_applications') or self.config_applications is None:
+            return [self.name]
+        if self.config_applications == []:
+            return {}
+        return list(self.config_applications.keys())
+        
 
 
 class ApplicationPackage(Package):
@@ -250,11 +250,16 @@ class ApplicationPackage(Package):
 
         self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "code")
 
-    def prepare(self, exclude_folders=None, build_assets_steps=None, debian_scripts=None):
+    def prepare(self, exclude_folders=None, build_assets_steps=None, debian_scripts=None,
+                configuration=None, config_applications=None):
         self.build_assets_steps = build_assets_steps
         self.exclude_folders = exclude_folders
         if debian_scripts:
             self.settings_package.update({'debian_scripts': debian_scripts})
+
+        self.config = configuration
+        self.config_applications = config_applications
+        self.settings_package.update({'country': configuration})
 
     def pre_build(self, extra_template_dir=None):
         code_path = os.path.join(self.full_path, self.relative_final_path)
@@ -275,6 +280,17 @@ class ApplicationPackage(Package):
                 local(prefix + step)
         self.template_options['is_python'] = True
         self.template_options['pyfiles_path'] = os.path.join("/", self.relative_final_path)
+
+        # from configuration
+        options = self.config
+        options.update({'full_name': self.name})
+        options.update(self.config_applications)
+        # add extrafiles information (maiden_name is the un-suffixed name)
+        options['extra_files'] = {}
+        for key,binary in self.extra_files.iteritems():
+            options['extra_files'][binary.unsuffixed_name] = binary.relative_filepath
+        self.template_options.update({'options': flatten_dict(options),})
+
 
 
     @property
@@ -305,9 +321,7 @@ class PythonEnvironmentPackage(Package):
         self.application_path = application_path
         super(PythonEnvironmentPackage, self).__init__(name, version=version)
 
-        self.working_copy_base = os.path.join("/", "tmp", "trebuchet", "working_copy")
-        self.working_path = os.path.join(self.working_copy_base,
-                            self.name, "env")
+        self.working_path = os.path.join("/", "tmp", "trebuchet", "working_copy", self.name, "env")
 
         self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "env")
         self.target_venv = os.path.join("/", self.relative_final_path)
@@ -328,7 +342,6 @@ class PythonEnvironmentPackage(Package):
 
     def pre_build(self, extra_template_dir=None):
         # create a working environment
-        prepare_folder(os.path.join(self.working_copy_base))
         prepare_virtual_env(self.working_path, self.binary)
 
         # install requirements
@@ -455,48 +468,6 @@ class ServicePackage(Package):
         return self.application.version_from_vcs
 
 
-class CountrySettingsPackage(Package):
-    """
-    If updated, needs to restart all upstart services from all applications.
-    """
-    template = "config.ini"
-
-    def __init__(self, name, version=None):
-        super(CountrySettingsPackage, self).__init__(name, version=version)
-        self.settings_package.update({"use_nginx": True})
-
-    def prepare(self, configuration, config_applications):
-        self.config = configuration
-        self.config_applications = config_applications
-        self.settings_package.update({'country': configuration})
-        self.code_path = os.path.join(self.full_path)
-
-    def pre_build(self, extra_template_dir=None):
-        options = self.config
-        options.update({'full_name': self.name})
-
-        options.update(self.config_applications)
-
-        # add extrafiles information (maiden_name is the un-suffixed name)
-        options['extra_files'] = {}
-        for key,binary in self.extra_files.iteritems():
-            options['extra_files'][binary.unsuffixed_name] = binary.relative_filepath
-
-        # main config file
-        main_config = get_custom_file('product', self.name, self.template)
-
-        main_config.build(
-                self.full_path,
-                {'options': flatten_dict(options),},
-                extra_template_dir=extra_template_dir
-            )
-
-    def get_service_dependencies(self):
-        if self.config_applications == []:
-            return {}
-        return list(self.config_applications.keys())
-
-
 class StaticPackage(Package):
     def __init__(self,
                  name,
@@ -535,4 +506,3 @@ class StaticPackage(Package):
                     dstpath = os.path.join(self.full_path, relpath)
                     os.makedirs(dstpath)
                     shutil.copy2(os.path.join(dirpath, filename), dstpath)
-

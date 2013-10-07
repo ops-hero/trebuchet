@@ -22,7 +22,7 @@ def _get_all_packages(project, architecture=None, options=None):
         pkg_list.append(pkg)
 
     # yield the packages again
-    for pkg in itertools.chain(*pkg_list):
+    for pkg in itertools.chain.from_iterable(pkg_list):
         yield pkg
 
 
