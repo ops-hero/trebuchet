@@ -23,7 +23,7 @@ def get_packages(application_path, config=None,
     config_applications = config.pop("applications", [])
     config_static = config.pop('static_files', [])
     # extract version options
-    versions_options = options.get("version_options", {})
+    versions_options = options.pop("version_options", {})
 
     # environment package
     if 'environment' in config:
