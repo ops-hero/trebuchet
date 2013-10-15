@@ -26,29 +26,28 @@ def get_custom_file(type_, name, template, target_path=None, target_extension=No
 
 class CustomFile(object):
     is_executable = False
-    relative_path = ""
+    target_path = ""
     extension = ""
-    maiden_name = None
 
     def __init__(self, name, template=None, target_path=None, target_extension=None,
                 target_is_executable=None, target_filename=None, maiden_name=None, options=None):
         self.name = name
         self.maiden_name = maiden_name
         self.template = template
+        self.options = options
 
-        if target_is_executable:
+        if target_is_executable is not None:
             self.is_executable = target_is_executable
 
-        if target_path:
-            self.relative_path = target_path
-
-        if target_extension:
-            self.extension = target_extension
-
-        if target_filename:
+        if target_filename is not None:
             self.filename = target_filename
 
-        self.options = options if options else {}
+        if target_path is not None:
+            self.target_path = target_path
+
+        if target_extension is not None:
+            self.extension = target_extension
+
 
     @property
     def unsuffixed_name(self):
@@ -93,23 +92,23 @@ class CustomFile(object):
     @property
     def relative_filepath(self):
         if hasattr(self, "filename"):
-            return os.path.join(self.relative_path, self.filename)
-        return os.path.join(self.relative_path,
+            return os.path.join(self.target_path, self.filename)
+        return os.path.join(self.target_path,
                             "%s%s" % (self.name, self.extension))
 
 
 class NGINXCustomFile(CustomFile):
-    relative_path = os.path.join("etc", "nginx", "sites-available")
+    target_path = os.path.join("etc", "nginx", "sites-available")
     extension = ".conf"
 
 
 class BinaryCustomFile(CustomFile):
-    relative_path = os.path.join("opt", "trebuchet", "bin")
+    target_path = os.path.join("opt", "trebuchet", "bin")
     is_executable = True
 
 
 class DEBIANCustomFile(CustomFile):
-    relative_path = os.path.join("DEBIAN")
+    target_path = os.path.join("DEBIAN")
 
     def post_build(self, full_path):
         local('echo "" >> %s' % full_path)
@@ -117,21 +116,13 @@ class DEBIANCustomFile(CustomFile):
 
 
 class ProductCustomFile(CustomFile):
-    relative_path = os.path.join("etc", "trebuchet")
+    target_path = os.path.join("etc", "trebuchet")
     extension = ".conf"
 
 class UpstartCustomFile(CustomFile):
-    relative_path = os.path.join("etc", "init")
+    target_path = os.path.join("etc", "init")
     extension = ".conf"
 
-# class HelicomServerConfigCustomFile(CustomFile):
-#     relative_path = os.path.join("etc", "trebuchet", "helicom_server")
-#     extension = ".cfg"
-
-# class HelicomBrokerConfigCustomFile(CustomFile):
-#     relative_path = os.path.join("etc", "trebuchet", "helicom_broker")
-#     extension = ".cfg"
-
 class NewrelicConfigCustomFile(CustomFile):
-    relative_path = os.path.join("etc", "trebuchet", "newrelic")
+    target_path = os.path.join("etc", "trebuchet", "newrelic")
     extension = ".ini"
