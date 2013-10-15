@@ -34,3 +34,15 @@ services:
                 -   "touch /tmp/secret_sauce_web_upstart.foo"
         env_var:
             command_options:    "--reload-on-rss 256 --reload-on-as 256 --limit-as 384 --harakiri 360 --max-requests 5000"
+
+static_files:
+    -   name:       secret_sauce_static
+        folders:
+            -   path:  "static"
+                includes:
+                    - "*"
+                excludes:
+                    - "*.bak"
+        debian_scripts:
+            postinst:
+                -   "echo hello"
