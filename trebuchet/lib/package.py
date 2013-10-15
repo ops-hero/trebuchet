@@ -9,7 +9,7 @@ import shutil
 from .utils import prepare_folder, prepare_virtual_env, \
                     local_sed, get_temp_path
 from .my_yaml import flatten_dict
-from .custom_file import get_custom_file
+from .custom_file import get_custom_file, DEBIANCustomFile
 
 
 def get_packages(application_path, config=None,
@@ -18,44 +18,54 @@ def get_packages(application_path, config=None,
     venv = None
     options = options if options else {}
 
+    name_suffix = config.get('name_suffix', "")
+
     # extract config for extra files
     config_extra_files = config.pop("extra_files", [])
+    config_services = config.pop("services", [])
     config_applications = config.pop("applications", [])
     config_static = config.pop('static_files', [])
+    config_environment = config.pop("environment", None)
+
     # extract version options
     versions_options = options.pop("version_options", {})
 
     # environment package
-    if 'environment' in config:
-        if config['environment']['type'] == "python":
-            venv = PythonEnvironmentPackage(config['environment']['name'] + config.get('name_suffix', ""),
-                                    application_path,
+    # TODO clean arguments
+    # TODO use factory for type of environment
+    if config_environment:
+        if config_environment['type'] == "python":
+            venv = PythonEnvironmentPackage(config_environment['name'] + name_suffix, application_path,
                                     architecture=architecture,
                                     version=versions_options.get("env"))
-            venv.prepare(binary=config['environment'].get('binary', ""),
-                        requirements=config['environment'].get('requirements', []),
-                        post_environment_steps=config['environment'].get('post_environment', []),
+            venv.prepare(binary=config_environment.get('binary', ""),
+                        requirements=config_environment.get('requirements', []),
+                        debian_scripts=config_environment.get('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
+                        post_environment_steps=config_environment.get('post_environment', []),
                         pip_options=options.get("pip_options", ""))
         else:
             raise NotImplementedError("environment type: %s"
-                                    % config['environment']['type'])
+                                    % config_environment['type'])
 
     # main application package
-    pkg = ApplicationPackage(config['name']  + config.get('name_suffix', ""), 
-                        application_path,
+    # TODO clean arguments
+    pkg = ApplicationPackage(config['name']  + name_suffix, application_path,
                         environment=venv,
                         version=versions_options.get("app"))
-    pkg.prepare(exclude_folders=config.get('exclude_folders', []),
-                build_assets_steps=config.get('build_assets', []),
+    pkg.prepare(exclude_folders=config.pop('exclude_folders', []),
+                build_assets_steps=config.pop('build_assets', []),
+                debian_scripts=config.pop('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
                 configuration=config,
                 config_applications=config_applications)
 
 
     # extra files attachment
+    # TODO clean arguments
+    # TODO keep options=config?
     extra_files_list = {}
     for file_ in config_extra_files:
         file_bin = get_custom_file(file_['type'],
-                                file_['name'] + config.get('name_suffix', ""),
+                                file_['name'] + name_suffix,
                                 file_['template'],
                                 file_.get('target_path', None),
                                 file_.get('target_extension', None),
@@ -67,13 +77,13 @@ def get_packages(application_path, config=None,
         extra_files_list[ file_['name'] ] = file_
 
     # package for each services
-    for service in config.get('services', []):
-        srv = ServicePackage(service['name'] + config.get('name_suffix', ""),
-                            pkg,
+    # TODO link to the extra file created previously
+    for service in config_services:
+        srv = ServicePackage(service['name'] + name_suffix, pkg,
                             version=versions_options.get("service"))
-        srv.prepare(binary=service['binary_name'] + config.get('name_suffix', ""),
+        srv.prepare(binary=service['binary_name'] + name_suffix,
                     binary_file = extra_files_list[ service['binary_name'] ],
-                    debian_scripts=service.get('debian_scripts', {}),
+                    debian_scripts=service.get('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
                     env_var=service.get('env_var', {}))
         yield srv
 
@@ -93,83 +103,83 @@ def get_packages(application_path, config=None,
 class Package(object):
     architecture = "all"
 
-    def __init__(self, name, build_path=None, version=None):
+    def __init__(self, name, path, version=None):
         self.name = name
         self.version = version if version else ''
+        self.path = path
 
         self.dependency_pkg = []
         self.extra_files = {}
         self.settings_package = {}
         self.template_options = {}
+        self.debian_scripts = {}
 
-    def build(self, debs_path, build_path=None, extra_template_dir=None, extra_description=None):
-        self.build_path = build_path if build_path else get_temp_path("build")
-        self.full_path = os.path.join(self.build_path, self.name)
+    def build(self, debs_path, build_path=None, extra_description=None):
+        build_path = build_path if build_path else os.path.join(get_temp_path("build"), self.name)
         
-        self.develop(build_path, extra_template_dir, extra_description)
-        self.pre_package(extra_template_dir)
-        self.package(debs_path)
+        self.develop(build_path, extra_description)
+        self.pre_package(build_path)
+        self.package(debs_path, build_path)
 
-    def develop(self, build_path=None, extra_template_dir=None, extra_description=None):
-        self.build_path = build_path if build_path else get_temp_path("build")
-        self.full_path = os.path.join(self.build_path, self.name)
-        self.extra_description = extra_description
+    def develop(self, build_path=None, extra_description=None):
+        build_path = build_path if build_path else os.path.join(get_temp_path("build"), self.name)
 
-        prepare_folder(self.full_path)
-        local("rm -rf %s/*" % self.full_path)
+        self.prepare_build_folder(build_path)
+        self.pre_build(build_path)
+        self.build_extra_files(build_path)
+        self.create_deb(build_path, extra_description)
 
-        self.pre_build(extra_template_dir=extra_template_dir)
+    def prepare_build_folder(self, build_path):
+        prepare_folder(build_path)
+        local("rm -rf %s/*" % build_path)
 
-        self.build_extra_files(extra_template_dir=extra_template_dir)
-        self.create_deb(extra_template_dir=extra_template_dir)
-
-    def pre_build(self, extra_template_dir=None):
+    def pre_build(self, build_path):
         raise NotImplementedError
 
-    def pre_package(self, extra_template_dir=None):
+    def pre_package(self, build_path):
         """
         Final changes before packaging, most likely to make the package non functional until deployed.
         """
         pass
 
-    def create_deb(self, extra_template_dir=None):
+    def create_deb(self, build_path, extra_description=None):
         """ Create the meta folder for debian package. """
+        options = {
+                'full_package_name':    self.full_package_name,
+                'architecture':         self.architecture,
+                'package_version':      self.package_version,
+                'description':          self.get_description(extra_description),
+                'dependencies':         self.dependencies,
+                'package_service_dependencies': self.get_service_dependencies(),
+                'settings':             self.settings_package,
+                'debian_scripts':       self.debian_scripts,
+                'maintainer':           'Arnaud Seilles <arnaud.seilles@gmail.com>',
+            }
+        options.update(self.template_options)
 
         my_cwd = os.path.abspath(os.path.dirname(__file__))
-        print "my_cwd: " + my_cwd
         for file_custom in local('ls %s' % os.path.join(my_cwd, "..", "templates", "DEBIAN"),
                                  capture=True).split():
-            self.template_options.update( {
-                'full_package_name': self.full_package_name,
-                'architecture':    self.architecture,
-                'package_version': self.package_version,
-                'description': self.description,
-                'dependencies': self.dependencies,
-                'package_service_dependencies': self.get_service_dependencies(),
-                'settings': self.settings_package,
-                'maintainer': 'Arnaud Seilles <arnaud.seilles@gmail.com>',
-            } )
-            template = "DEBIAN/%s" % file_custom
-
-            file_ = get_custom_file('debian', file_custom, template)
-            file_.build(self.full_path,
-                        self.template_options,
-                        extra_template_dir=extra_template_dir)
+            file_ = DEBIANCustomFile(file_custom, os.path.join("DEBIAN", file_custom))
+            file_.build(build_path,
+                        options=options,
+                        extra_template_dir=self.path)
 
     @property
     def final_deb_name(self):
         return "%s-%s-%s.deb" % (self.full_package_name,
                             self.package_version, self.architecture)
-    def package(self, debs_path):
+
+    def package(self, debs_path, build_path):
         prepare_folder(debs_path)
 
         full_deb= os.path.join(debs_path, self.final_deb_name)
 
         with settings(warn_only=True):
-            local("rm -f %s" % os.path.join(self.full_path, full_deb))
-            local('find -L %s -name "*.pyc" -delete' % self.full_path)
-            local('find -L %s -name ".git$" -exec rm -r {} \;' % self.full_path)
-        local("dpkg-deb --build %s %s" % (self.full_path, full_deb))
+            local("rm -f %s" % os.path.join(build_path, full_deb))
+            local('find -L %s -name "*.pyc" -delete' % build_path)
+            local('find -L %s -name ".git$" -exec rm -r {} \;' % build_path)
+        local("dpkg-deb --build %s %s" % (build_path, full_deb))
 
     @property
     def full_package_name(self):
@@ -182,13 +192,12 @@ class Package(object):
 
         return "1.0.0"
 
-    @property
-    def description(self):
+    def get_description(self, extra_description=""):
         text = "Package %s (version %s) built on the %s\n" % \
                         (self.full_package_name, self.version, datetime.now().isoformat(' '))
         # extended description in a debian pkg can be multilined, must start by at least 1 space.
-        if self.extra_description:
-            text += "\n".join([ " "+line for line in self.extra_description.split("\n") if line is not ""])
+        if extra_description:
+            text += "\n".join([ " "+line for line in extra_description.split("\n") if line is not ""])
 
         return text
 
@@ -208,15 +217,15 @@ class Package(object):
     def attach_file(self, name, file_bin):
         self.extra_files[name] = file_bin
 
-    def build_extra_files(self, extra_template_dir=None):
+    def build_extra_files(self, build_path):
         options = {}
         options.update(self.extra_config)
         options.update(self.template_options)
 
         for key,binary in self.extra_files.iteritems():
-            binary.build(self.full_path,
+            binary.build(build_path,
                 options,
-                extra_template_dir=extra_template_dir)
+                extra_template_dir=self.path)
 
     @property
     def extra_config(self):
@@ -243,9 +252,9 @@ class ApplicationPackage(Package):
                 environment=None,
                 version=None):
         self.application_path = application_path
-        super(ApplicationPackage, self).__init__(name, version=version)
-        self.environment = environment
+        super(ApplicationPackage, self).__init__(name, application_path, version=version)
 
+        self.environment = environment
         self.dependency_pkg = [environment]
 
         self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "code")
@@ -254,15 +263,12 @@ class ApplicationPackage(Package):
                 configuration=None, config_applications=None):
         self.build_assets_steps = build_assets_steps
         self.exclude_folders = exclude_folders
-        if debian_scripts:
-            self.settings_package.update({'debian_scripts': debian_scripts})
-
+        self.debian_scripts = debian_scripts
         self.config = configuration
         self.config_applications = config_applications
-        self.settings_package.update({'country': configuration})
 
-    def pre_build(self, extra_template_dir=None):
-        code_path = os.path.join(self.full_path, self.relative_final_path)
+    def pre_build(self, build_path):
+        code_path = os.path.join(build_path, self.relative_final_path)
         
         prepare_folder(code_path)
 
@@ -319,7 +325,7 @@ class PythonEnvironmentPackage(Package):
     """
     def __init__(self, name, application_path, architecture=None, version=None):
         self.application_path = application_path
-        super(PythonEnvironmentPackage, self).__init__(name, version=version)
+        super(PythonEnvironmentPackage, self).__init__(name, application_path, version=version)
 
         self.working_path = os.path.join("/", "tmp", "trebuchet", "working_copy", self.name, "env")
 
@@ -338,9 +344,9 @@ class PythonEnvironmentPackage(Package):
         self.post_environment_steps = post_environment_steps
         self.pip_options = pip_options
         if debian_scripts:
-            self.settings_package.update({'debian_scripts': debian_scripts})
+            self.debian_scripts = debian_scripts
 
-    def pre_build(self, extra_template_dir=None):
+    def pre_build(self, build_path):
         # create a working environment
         prepare_virtual_env(self.working_path, self.binary)
 
@@ -360,8 +366,8 @@ class PythonEnvironmentPackage(Package):
         self.template_options['pyfiles_path'] = self.target_venv
 
 
-    def pre_package(self, extra_template_dir=None):
-        env_path = os.path.join(self.full_path, self.relative_final_path)
+    def pre_package(self, build_path):
+        env_path = os.path.join(build_path, self.relative_final_path)
         venv_bin_path = os.path.join(env_path, 'bin')
         
         # copy the working environment to the package location
@@ -405,7 +411,7 @@ class ServicePackage(Package):
     """
 
     def __init__(self, name, application, version=None):
-        super(ServicePackage, self).__init__(name, version=version)
+        super(ServicePackage, self).__init__(name, application.path, version=version)
         self.application = application
         self.dependency_pkg = [application]
         self.env_var = {}
@@ -418,11 +424,11 @@ class ServicePackage(Package):
         self.binary_file = binary_file
 
         if debian_scripts:
-            self.settings_package.update({'debian_scripts': debian_scripts})
+            self.debian_scripts = debian_scripts
         if env_var:
             self.env_var = env_var
 
-    def pre_build(self, extra_template_dir=None):
+    def pre_build(self, build_path):
         # retrieve path to binary from application package
         binary_path = self.application.get_extra_file_final_path(self.binary)
 
@@ -435,25 +441,22 @@ class ServicePackage(Package):
         options.update(self.application.extra_config)
         options.update({'base_template': "upstart/base-service.conf"})
 
-
-
         # main upstart file
         upstart_worker = get_custom_file('upstart', self.final_service,
                                         self.binary_file['template'])
-
         upstart_worker.build(
-                self.full_path,
+                build_path,
                 options,
-                extra_template_dir=extra_template_dir
+                extra_template_dir=self.path
             )
 
         # upstart wrappers for all config files (mutliple tasks)
         upstart_ctl = get_custom_file('upstart', self.controller_service,
                                         "upstart/controller.conf")
         upstart_ctl.build(
-                self.full_path,
+                build_path,
                 options,
-                extra_template_dir=extra_template_dir
+                extra_template_dir=self.path
             )
 
         # executable scripts to control upstart

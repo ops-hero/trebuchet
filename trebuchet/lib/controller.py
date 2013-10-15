@@ -44,7 +44,6 @@ def build_app(project, prepare, package, version_options=None):
                                     "version_options": version_options}):
         pkg.build(package.debs_path,
                 build_path=prepare.build_path,
-                extra_template_dir=project.full_path,
                 extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
@@ -65,9 +64,7 @@ def develop_app(project, prepare, version_options=None):
                             architecture=prepare.architecture,
                             options={"pip_options": prepare.pip_options,
                                     "version_options": version_options}):
-        pkg.develop(build_path=prepare.build_path,
-                extra_template_dir=project.full_path,
-                extra_description=prepare.extra_description)
+        pkg.develop(extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
     print pkg_list
