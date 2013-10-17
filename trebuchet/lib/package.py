@@ -52,9 +52,15 @@ def get_packages(application_path, config=None,
 
     # main application package
     # TODO clean arguments
-    pkg = ApplicationPackage(config['name']  + name_suffix, application_path,
-                        environment=venv,
-                        version=versions_options.get("app"))
+    if config.get('type') == "application":
+        pkg = ApplicationPackage(config['name']  + name_suffix, application_path,
+                        environment=venv, version=versions_options.get("app"))
+    elif config.get('type') == "configuration":
+        pkg = ConfigurationPackage(config['name']  + name_suffix, application_path,
+                        environment=venv, version=versions_options.get("app"))
+    else:
+        raise NotImplementedError("package type: %s" % config.get('type'))
+
     pkg.prepare(exclude_folders=config.pop('exclude_folders', []),
                 build_assets_steps=config.pop('build_assets', []),
                 debian_scripts=config.pop('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
@@ -350,6 +356,9 @@ class PythonEnvironmentPackage(Package):
             self.debian_scripts = debian_scripts
 
     def pre_build(self, build_path):
+        env_path = os.path.join(build_path, self.relative_final_path)
+        venv_bin_path = os.path.join(env_path, 'bin')
+
         # create a working environment
         prepare_virtual_env(self.working_path, self.binary)
 
@@ -472,6 +481,21 @@ class ServicePackage(Package):
     @property
     def version_from_vcs(self):
         return self.application.version_from_vcs
+
+class ConfigurationPackage(ApplicationPackage):
+    """
+    If updated, needs to restart all dependent upstart services for this application.
+    """
+
+    def __init__(self, name, application_path,
+                environment=None,
+                version=None):
+        self.application_path = application_path
+        super(ConfigurationPackage, self).__init__(name, application_path, environment=None, version=version)
+        self.relative_final_path = ""
+
+    def _prepare_code_path(self, build_path, code_path):
+        pass
 
 
 class StaticPackage(Package):
