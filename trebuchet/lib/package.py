@@ -490,37 +490,35 @@ class StaticPackage(Package):
     def __init__(self,
                  name,
                  application,
-                 build_path=None,
                  version=None):
         self.application = application
-        super(StaticPackage, self).__init__(name, build_path, version=version)
+        super(StaticPackage, self).__init__(name, application.path, version=version)
+        self.relative_final_path = os.path.join("opt", "trebuchet", self.name, "static")
 
-    def prepare(self, config, folders):
-        self.config = config
+    def prepare(self, folders, debian_scripts=None):
         self.folders = folders
-        if 'debian_scripts' in self.config:
-            self.settings_package.update({
-                'debian_scripts': self.config['debian_scripts']})
+        if debian_scripts:
+            self.debian_scripts = debian_scripts
 
-    def pre_build(self, extra_template_dir=None):
-        for folder in self.config['folders']:
-            def check_filenames(filenames):
+    def pre_build(self, build_path):
+        for folder in self.folders:
+
+            def exclude_and_include(path, names):
+                names = set(names)
                 if 'includes' in folder:
                     for include in folder['includes']:
-                        filenames = set(
-                            fnmatch.filter(filenames, include))
-                else:
-                    filenames = set(filenames)
+                        names.difference_update(
+                            set(fnmatch.filter(list(names), include)))
                 if 'excludes' in folder:
                     for exclude in folder['excludes']:
-                        filenames.difference_update(
-                            fnmatch.filter(filenames, exclude))
-                return filenames
-            w = os.walk(os.path.join(self.application.code_path, folder['path']))
-            for dirpath, dirnames, partial_filenames in w:
-                for filename in check_filenames(partial_filenames):
-                    relpath = os.path.relpath(dirpath,
-                                              self.application.code_path)
-                    dstpath = os.path.join(self.full_path, relpath)
-                    os.makedirs(dstpath)
-                    shutil.copy2(os.path.join(dirpath, filename), dstpath)
+                        names = set(fnmatch.filter(list(names), exclude))
+                return list(names)
+
+            source = os.path.join(self.application.build_path, self.application.relative_final_path, folder['path'])
+
+            if self.application.relative_final_path == "":
+                destination = os.path.join(build_path, folder['path'])
+            else:
+                destination = os.path.join(build_path, self.relative_final_path, folder['path'])
+
+            shutil.copytree(source, destination, ignore=exclude_and_include)
