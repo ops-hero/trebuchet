@@ -96,13 +96,14 @@ def get_packages(application_path, config=None,
                     env_var=service.get('env_var', {}))
         yield srv
 
+    if venv: yield venv
+    yield pkg
+
     for staticfileconf in config_static:
-        static = StaticPackage(staticfileconf['name']+config.get('name_suffix', ""),
-                               pkg,
-                               build_path=build_path,
+        static = StaticPackage(staticfileconf['name']+name_suffix, pkg,
                                version=versions_options.get("static_files"))
-        static.prepare(folders = staticfileconf['folders'],
-                               config=staticfileconf)
+        static.prepare(folders = staticfileconf.pop('folders'),
+                    debian_scripts=staticfileconf.pop('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}))
         yield static
 
     if venv: yield venv
