@@ -106,9 +106,6 @@ def get_packages(application_path, config=None,
                     debian_scripts=staticfileconf.pop('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}))
         yield static
 
-    if venv: yield venv
-    yield pkg
-
 
 class Package(object):
     architecture = "all"
