@@ -110,7 +110,7 @@ def get_packages(application_path, config=None,
 class Package(object):
     architecture = "all"
 
-    def __init__(self, name, path, version=None):
+    def __init__(self, name, path, version=None, build_path=None, ):
         self.name = name
         self.version = version if version else ''
         self.path = path
@@ -121,20 +121,17 @@ class Package(object):
         self.template_options = {}
         self.debian_scripts = {}
 
-    def build(self, debs_path, build_path=None, extra_description=None):
-        build_path = build_path if build_path else os.path.join(get_temp_path("build"), self.name)
-        
-        self.develop(build_path, extra_description)
-        self.pre_package(build_path)
-        self.package(debs_path, build_path)
+        self.build_path = build_path if build_path else os.path.join(get_temp_path("build"), self.name)
 
-    def develop(self, build_path=None, extra_description=None):
-        build_path = build_path if build_path else os.path.join(get_temp_path("build"), self.name)
+    def build(self, debs_path, extra_description=None):
+        self.develop(extra_description)
+        self.package(debs_path, self.build_path)
 
-        self.prepare_build_folder(build_path)
-        self.pre_build(build_path)
-        self.build_extra_files(build_path)
-        self.create_deb(build_path, extra_description)
+    def develop(self, extra_description=None):
+        self.prepare_build_folder(self.build_path)
+        self.pre_build(self.build_path)
+        self.build_extra_files(self.build_path)
+        self.create_deb(self.build_path, extra_description)
 
     def prepare_build_folder(self, build_path):
         prepare_folder(build_path)
@@ -142,12 +139,6 @@ class Package(object):
 
     def pre_build(self, build_path):
         raise NotImplementedError
-
-    def pre_package(self, build_path):
-        """
-        Final changes before packaging, most likely to make the package non functional until deployed.
-        """
-        pass
 
     def create_deb(self, build_path, extra_description=None):
         """ Create the meta folder for debian package. """
@@ -247,7 +238,6 @@ class Package(object):
         if self.config_applications == []:
             return {}
         return list(self.config_applications.keys())
-        
 
 
 class ApplicationPackage(Package):
@@ -279,14 +269,23 @@ class ApplicationPackage(Package):
         
         prepare_folder(code_path)
 
+        self._prepare_code_path(build_path, code_path)
+        self._prepare_folders(build_path, code_path)
+        self._run_build_asset_steps(build_path, code_path)
+        self._add_extra_files_config(build_path, code_path)
+
+    def _prepare_code_path(self, build_path, code_path):
         local("cp -R %s/* %s" % (self.application_path, code_path))
-        local("rm -rf %s/.git" % code_path)
+
+    def _prepare_folders(self, build_path, code_path):
         for folder in self.exclude_folders:
             local("rm -rf %s/%s" % (code_path, folder))
 
+        local("rm -rf %s/.git" % code_path)
         with lcd(code_path):
             local("echo %s > GIT_VERSION" % self.version_from_vcs)
 
+    def _run_build_asset_steps(self, build_path, code_path):
         prefix = ". %s/bin/activate && " % self.environment.working_path if self.environment else ""
         with lcd(code_path):
             for step in self.build_assets_steps:
@@ -294,6 +293,7 @@ class ApplicationPackage(Package):
         self.template_options['is_python'] = True
         self.template_options['pyfiles_path'] = os.path.join("/", self.relative_final_path)
 
+    def _add_extra_files_config(self, build_path, code_path):
         # from configuration
         options = self.config
         options.update({'full_name': self.name})
@@ -303,8 +303,6 @@ class ApplicationPackage(Package):
         for key,binary in self.extra_files.iteritems():
             options['extra_files'][binary.unsuffixed_name] = binary.relative_filepath
         self.template_options.update({'options': flatten_dict(options),})
-
-
 
     @property
     def extra_config(self):
@@ -375,11 +373,6 @@ class PythonEnvironmentPackage(Package):
         self.template_options['is_python'] = True
         self.template_options['pyfiles_path'] = self.target_venv
 
-
-    def pre_package(self, build_path):
-        env_path = os.path.join(build_path, self.relative_final_path)
-        venv_bin_path = os.path.join(env_path, 'bin')
-        
         # copy the working environment to the package location
         prepare_folder(env_path)
         local("cp -LR %s/* %s" % (self.working_path, env_path))
@@ -412,7 +405,6 @@ class PythonEnvironmentPackage(Package):
                 self._version_from_vcs = local("git log -n 1 --pretty=format:%%h %s" % list_files, capture=True)
 
         return self._version_from_vcs
-
 
 
 class ServicePackage(Package):
@@ -468,8 +460,6 @@ class ServicePackage(Package):
                 options,
                 extra_template_dir=self.path
             )
-
-        # executable scripts to control upstart
 
     def get_dependencies(self):
         deps = [ self.application.name ]

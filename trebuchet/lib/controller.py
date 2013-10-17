@@ -43,7 +43,6 @@ def build_app(project, prepare, package, version_options=None):
                             options={"pip_options": prepare.pip_options,
                                     "version_options": version_options}):
         pkg.build(package.debs_path,
-                build_path=prepare.build_path,
                 extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
