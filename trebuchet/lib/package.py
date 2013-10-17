@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import fnmatch
 import shutil
+import copy
 
 from .utils import prepare_folder, prepare_virtual_env, \
                     local_sed, get_temp_path
@@ -20,12 +21,14 @@ def get_packages(application_path, config=None,
 
     name_suffix = config.get('name_suffix', "")
 
+    # make deep copy to avoid issue
+    new_config = copy.deepcopy(config)
     # extract config for extra files
-    config_extra_files = config.pop("extra_files", [])
-    config_services = config.pop("services", [])
-    config_applications = config.pop("applications", [])
-    config_static = config.pop('static_files', [])
-    config_environment = config.pop("environment", None)
+    config_extra_files = new_config.pop("extra_files", [])
+    config_services = new_config.pop("services", [])
+    config_applications = new_config.pop("applications", [])
+    config_static = new_config.pop('static_files', [])
+    config_environment = new_config.pop("environment", None)
 
     # extract version options
     versions_options = options.pop("version_options", {})
