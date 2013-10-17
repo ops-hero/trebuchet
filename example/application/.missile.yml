@@ -58,8 +58,6 @@ static_files:
     -   name:       secret_sauce_static
         folders:
             -   path:  "static"
-                includes:
-                    - "*"
                 excludes:
                     - "*.bak"
         debian_scripts:
