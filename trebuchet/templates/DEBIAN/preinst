@@ -10,7 +10,7 @@ fi
 
 
 # create folders if not exist
-CORE_DIRS="/opt/trebuchet /etc/trebuchet"
+CORE_DIRS="/opt/trebuchet /etc/trebuchet /var/log/trebuchet"
 
 for dir in $CORE_DIRS; do
     if [ ! -d $dir ]; then
@@ -25,8 +25,8 @@ done
 initctl emit {{ package | upper }}_STOP_ALL
 {% endfor %}
 
-{% if settings.debian_scripts and settings.debian_scripts.preinst %}
-{% for script in settings.debian_scripts.preinst %}
+{% if debian_scripts.preinst is defined %}
+{% for script in debian_scripts.preinst %}
 {{ script }}
 {% endfor %}
 {% endif %}

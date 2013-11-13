@@ -7,12 +7,27 @@ environment:
     binary: python2.7
     requirements:
         -   requirements.pip
-    post_environment:   []
+    post_environment:
+        -   "touch secret_sauce_lib.post_environment"
+
+debian_scripts:
+    postinst:
+        -   "touch /tmp/secret_sauce.postinst"
+    preinst:
+        -   "touch /tmp/secret_sauce.preinst"
+    prerm:
+        -   "touch /tmp/secret_sauce.prerm"
 
 extra_files:
     -   name:           secret_sauce_uwsgi
         type:           binary
         template:       .trebuchet/uwsgi.sh
+
+    -   name:                   secret_sauce_custom
+        type:                   custom
+        template:               .trebuchet/custom.ini
+        target_path:            /etc/trebuchet/secret_sauce/
+        target_extension:       .cfg
 
 services:
     -   name:           secret_sauce_web_1_upstart
@@ -32,6 +47,10 @@ services:
         debian_scripts:
             postinst:
                 -   "touch /tmp/secret_sauce_web_upstart.foo"
+            preinst:
+                -   "touch /tmp/secret_sauce_web_upstart.preinst"
+            prerm:
+                -   "touch /tmp/secret_sauce_web_upstart.prerm"
         env_var:
             command_options:    "--reload-on-rss 256 --reload-on-as 256 --limit-as 384 --harakiri 360 --max-requests 5000"
 
@@ -39,8 +58,6 @@ static_files:
     -   name:       secret_sauce_static
         folders:
             -   path:  "static"
-                includes:
-                    - "*"
                 excludes:
                     - "*.bak"
         debian_scripts:

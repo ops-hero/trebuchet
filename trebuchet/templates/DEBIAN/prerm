@@ -6,12 +6,12 @@
 initctl emit {{ package | upper }}_STOP_ALL
 {% endfor %}
 
-{% if settings.debian_scripts and settings.debian_scripts.prerm %}
-{% for script in settings.debian_scripts.prerm %}
+{% if debian_scripts.prerm is defined %}
+{% for script in debian_scripts.prerm %}
 {{ script }}
 {% endfor %}
 {% endif %}
 
-{% if is_python %}
+{% if is_python|default(False) %}
 find {{ pyfiles_path }} -name "*.pyc" -delete
 {% endif %}

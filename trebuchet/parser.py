@@ -17,6 +17,8 @@ def parse_version(args):
         versions['env'] = args.get("--env-version")
     if args.get("--service-version"):
         versions['service'] = args.get("--service-version")
+    if args.get("--static-version"):
+        versions['static_files'] = args.get("--static-version")
 
     return versions
 
