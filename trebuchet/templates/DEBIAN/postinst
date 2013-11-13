@@ -7,12 +7,12 @@
 {% endif %}
 
 
-{% if settings.use_nginx|default %}
+{% if settings.use_nginx|default(False) %}
 if pgrep nginx > /dev/null; then
     /etc/init.d/nginx reload 
 fi
 {% endif %}
 
-{% if is_python|default %}
+{% if is_python|default(False) %}
 python -m compileall -q {{ pyfiles_path}} || true
 {% endif %}

@@ -290,7 +290,7 @@ class ApplicationPackage(Package):
         with lcd(code_path):
             for step in self.build_assets_steps:
                 local(prefix + step)
-        self.template_options['is_python'] = True
+        self.template_options['is_python'] = isinstance(self.environment, PythonEnvironmentPackage)
         self.template_options['pyfiles_path'] = os.path.join("/", self.relative_final_path)
 
     def _add_extra_files_config(self, build_path, code_path):
