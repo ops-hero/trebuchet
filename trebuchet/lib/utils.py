@@ -111,7 +111,9 @@ def local_template(filename, destination, context=None, use_jinja=False,
             from jinja2 import Environment, FileSystemLoader, contextfunction, StrictUndefined
 
             loader = FileSystemLoader(template_dir or '.')
-            jenv = Environment(loader=loader, undefined=StrictUndefined)
+            jenv = Environment(loader=loader,
+                               undefined=StrictUndefined,
+                               keep_trailing_newline=True)
             jenv.filters["shquote"] = lambda s: pipes.quote(str(s))
 
             template = jenv.get_template(filename)
