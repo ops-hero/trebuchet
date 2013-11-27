@@ -7,7 +7,7 @@ Lint command will check the configuration file and output the list of packages t
 
 Usage:
     trebuchet build <config_file> [--output DEBS_PATH] [--build BUILD_PATH] [--arch ARCH] [--pip-options PIP-OPTIONS] [--app-version APP_VERSION] [--env-version ENV_VERSION] [--service-version SERVICE_VERSION] [--static-version STATIC_VERSION] [--dry-run] [--web-callback URL] [--extra-description MESSAGE]
-    trebuchet develop <config_file> [--build BUILD_PATH] [--arch ARCH] [--pip-options PIP-OPTIONS] [--app-version APP_VERSION] [--env-version ENV_VERSION] [--service-version SERVICE_VERSION] [--extra-description MESSAGE]
+    trebuchet develop <config_file> [--build BUILD_PATH] [--arch ARCH] [--pip-options PIP-OPTIONS] [--app-version APP_VERSION] [--env-version ENV_VERSION] [--service-version SERVICE_VERSION] [--static-version STATIC_VERSION] [--extra-description MESSAGE]
     trebuchet lint <config_file>
     trebuchet -h | --help
     trebuchet --version
