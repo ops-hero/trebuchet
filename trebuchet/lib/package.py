@@ -14,10 +14,11 @@ from .custom_file import get_custom_file, DEBIANCustomFile
 
 
 def get_packages(application_path, config=None,
-                architecture=None, options=None):
+                architecture=None, options=None, version_options=None):
     """ Generator of packages for an application. """
     venv = None
     options = options if options else {}
+    version_options = version_options if version_options else {}
 
     name_suffix = config.get('name_suffix', "")
 
@@ -30,9 +31,6 @@ def get_packages(application_path, config=None,
     config_static = new_config.pop('static_files', [])
     config_environment = new_config.pop("environment", None)
 
-    # extract version options
-    versions_options = options.pop("version_options", {})
-
     # environment package
     # TODO clean arguments
     # TODO use factory for type of environment
@@ -40,7 +38,7 @@ def get_packages(application_path, config=None,
         if config_environment['type'] == "python":
             venv = PythonEnvironmentPackage(config_environment['name'] + name_suffix, application_path,
                                     architecture=architecture,
-                                    version=versions_options.get("env"))
+                                    version=version_options.get("env"))
             venv.prepare(binary=config_environment.get('binary', ""),
                         requirements=config_environment.get('requirements', []),
                         debian_scripts=config_environment.get('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
@@ -54,10 +52,10 @@ def get_packages(application_path, config=None,
     # TODO clean arguments
     if config.get('type') == "application":
         pkg = ApplicationPackage(config['name']  + name_suffix, application_path,
-                        environment=venv, version=versions_options.get("app"))
+                        environment=venv, version=version_options.get("app"))
     elif config.get('type') == "configuration":
         pkg = ConfigurationPackage(config['name']  + name_suffix, application_path,
-                        environment=venv, version=versions_options.get("app"))
+                        environment=venv, version=version_options.get("app"))
     else:
         raise NotImplementedError("package type: %s" % config.get('type'))
 
@@ -89,7 +87,7 @@ def get_packages(application_path, config=None,
     # TODO link to the extra file created previously
     for service in config_services:
         srv = ServicePackage(service['name'] + name_suffix, pkg,
-                            version=versions_options.get("service"))
+                            version=version_options.get("service"))
         srv.prepare(binary=service['binary_name'] + name_suffix,
                     binary_file = extra_files_list[ service['binary_name'] ],
                     debian_scripts=service.get('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}),
@@ -101,7 +99,7 @@ def get_packages(application_path, config=None,
 
     for staticfileconf in config_static:
         static = StaticPackage(staticfileconf['name']+name_suffix, pkg,
-                               version=versions_options.get("static_files"))
+                               version=version_options.get("static_files"))
         static.prepare(folders = staticfileconf.pop('folders'),
                     debian_scripts=staticfileconf.pop('debian_scripts', {'postinst': [], 'preinst':[], 'prerm':[]}))
         yield static

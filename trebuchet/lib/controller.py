@@ -6,7 +6,7 @@ from .callbacks import do_web_callback, jsonfy_pkg
 
 
 
-def _get_all_packages(project, architecture=None, options=None):
+def _get_all_packages(project, architecture=None, options=None, version_options=None):
     """
     Generator of packages to be built.
     """
@@ -18,7 +18,8 @@ def _get_all_packages(project, architecture=None, options=None):
         pkg = get_packages(project.full_path,
                         config=config,
                         architecture=architecture,
-                        options=options)
+                        options=options,
+                        version_options=version_options)
         pkg_list.append(pkg)
 
     # yield the packages again
@@ -40,8 +41,8 @@ def build_app(project, prepare, package, version_options=None):
 
     for pkg in _get_all_packages(project,
                             architecture=prepare.architecture,
-                            options={"pip_options": prepare.pip_options,
-                                    "version_options": version_options}):
+                            options={"pip_options": prepare.pip_options},
+                            version_options=version_options):
         pkg.build(package.debs_path,
                 extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
@@ -61,8 +62,8 @@ def develop_app(project, prepare, version_options=None):
 
     for pkg in _get_all_packages(project,
                             architecture=prepare.architecture,
-                            options={"pip_options": prepare.pip_options,
-                                    "version_options": version_options}):
+                            options={"pip_options": prepare.pip_options},
+                            version_options=version_options):
         pkg.develop(extra_description=prepare.extra_description)
         pkg_list.append(pkg.final_deb_name)
 
