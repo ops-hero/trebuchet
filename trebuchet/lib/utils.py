@@ -1,5 +1,6 @@
 import os
 import pipes
+import codecs
 from fabric.api import local, settings, hide
 
 def prepare_folder(folder):
@@ -131,7 +132,7 @@ def local_template(filename, destination, context=None, use_jinja=False,
             tb = traceback.format_exc()
             abort(tb + "\nUnable to import Jinja2 -- see above.")
     else:
-        with open(filename) as inputfile:
+        with codecs.open(filename, encoding='utf-8') as inputfile:
             text = inputfile.read()
         if context:
             text = text % context
@@ -141,7 +142,7 @@ def local_template(filename, destination, context=None, use_jinja=False,
         local("cp %s{,.bak}" % destination)
 
     # Upload the file.
-    with open(destination, "w") as f:
+    with codecs.open(destination, "w", encoding='utf-8') as f:
         f.write(text)
 
 
