@@ -55,7 +55,8 @@ def get_packages(application_path, config=None,
                         environment=venv, version=version_options.get("app"))
     elif config.get('type') == "configuration":
         pkg = ConfigurationPackage(config['name']  + name_suffix, application_path,
-                        environment=venv, version=version_options.get("app"))
+                        environment=venv, version=version_options.get("app"),
+                        maiden_name=config['name'])
     else:
         raise NotImplementedError("package type: %s" % config.get('type'))
 
@@ -475,13 +476,27 @@ class ConfigurationPackage(ApplicationPackage):
 
     def __init__(self, name, application_path,
                 environment=None,
-                version=None):
+                version=None,
+                maiden_name=None):
+        self.maiden_name = maiden_name
         self.application_path = application_path
         super(ConfigurationPackage, self).__init__(name, application_path, environment=None, version=version)
         self.relative_final_path = ""
 
     def _prepare_code_path(self, build_path, code_path):
         pass
+
+    def pre_build(self, build_path):
+        # attach the main configuration file
+        file_bin = get_custom_file('product',
+            self.name,
+            'config.ini',
+            maiden_name = self.maiden_name,
+            options=self.config)
+        self.attach_file(self.name, file_bin)
+
+        # call parent method
+        ApplicationPackage.pre_build(self, build_path)
 
 
 class StaticPackage(Package):
